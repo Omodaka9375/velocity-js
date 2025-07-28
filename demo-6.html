@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Page 1 - Velocity.js Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .content-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .content-card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+
+        .content-card p {
+            color: #718096;
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            color: #4a5568;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #48bb78;
+            font-weight: bold;
+        }
+
+        .stats-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: #edf2f7;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .back-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .demo-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .demo-content h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .demo-content h4 {
+            color: #667eea;
+            margin: 25px 0 15px 0;
+            font-size: 1.2rem;
+        }
+
+        .code-block {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .navigation {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #4a5568;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-link:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+
+        /* Loading animation for demo */
+        .loading-demo {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .velocity-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .velocity-indicator.cached {
+            background: rgba(72, 187, 120, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <div class="velocity-indicator" id="velocity-status">
+        <span class="loading-demo"></span>
+        Loading...
+    </div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <div class="navigation">
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">← Back to Tests</a>
+                <a href="demo-1.html" class="nav-link">Demo 1</a>
+                <a href="demo-2.html" class="nav-link">Demo 2</a>
+                <a href="demo-3.html" class="nav-link">Demo 3</a>
+                <a href="demo-4.html" class="nav-link">Demo 4</a>
+                <a href="demo-5.html" class="nav-link">Demo 5</a>
+                <a href="demo-6.html" class="nav-link">Demo 6</a>
+                <a href="demo-7.html" class="nav-link">Demo 7</a>
+                <a href="demo-8.html" class="nav-link">Demo 8</a>
+                <a href="demo-9.html" class="nav-link">Demo 9</a>
+                <a href="demo-10.html" class="nav-link">Demo 10</a>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <h1>Demo Page Template</h1>
+            <p>This is a demonstration page for testing Velocity.js performance optimization. 
+               This page simulates real-world content with various elements that would benefit 
+               from intelligent prefetching and caching strategies.</p>
+        </div>
+
+        <!-- Content Grid -->
+        <div class="content-grid">
+            <div class="content-card">
+                <h3>🚀 Performance Features</h3>
+                <p>This demo page showcases various performance optimization techniques that Velocity.js can accelerate through intelligent prefetching.</p>
+                <ul class="feature-list">
+                    <li>Smart resource prefetching</li>
+                    <li>Intelligent caching strategies</li>
+                    <li>Background resource loading</li>
+                    <li>Service worker integration</li>
+                    <li>Real-time performance monitoring</li>
+                </ul>
+            </div>
+
+            <div class="content-card">
+                <h3>📊 Load Time Metrics</h3>
+                <p>Monitor how Velocity.js improves page load times through predictive loading and advanced caching mechanisms.</p>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="load-time">-</div>
+                        <div class="stat-label">Load Time (ms)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="cache-status">-</div>
+                        <div class="stat-label">Cache Status</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h3>🎯 User Experience</h3>
+                <p>Experience the difference that intelligent prefetching makes in real-world navigation scenarios.</p>
+                <div class="highlight">
+                    <strong>Try this:</strong> Hover over the navigation links above to see Velocity.js 
+                    prefetching in action. Notice how subsequent page loads feel instantaneous!
+                </div>
+            </div>
+
+            <div class="content-card">
+                <h3>🔧 Technical Details</h3>
+                <p>This page contains various resources and content types that demonstrate Velocity.js capabilities:</p>
+                <ul class="feature-list">
+                    <li>HTML content with rich formatting</li>
+                    <li>CSS styles and animations</li>
+                    <li>JavaScript functionality</li>
+                    <li>Simulated API data</li>
+                    <li>Cross-linked navigation</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Demo Content -->
+        <div class="demo-content">
+            <h2>Sample Content Section</h2>
+            <p>This section contains sample content to make the page more realistic for testing purposes. 
+               In a real application, this would be your actual page content that users navigate to.</p>
+
+            <h4>Code Example</h4>
+            <div class="code-block">
+// Example of how Velocity.js optimizes this page
+const velocity = new Velocity({
+    prefetchOnHover: true,
+    cacheStrategy: 'intelligent',
+    maxCacheSize: 100
+});
+
+// Automatic prefetching when user hovers over links
+document.addEventListener('mouseover', (e) => {
+    if (e.target.tagName === 'A') {
+        velocity.prefetch(e.target.href);
+    }
+});
+            </div>
+
+            <h4>Performance Benefits</h4>
+            <p>With Velocity.js active, this page and others like it will:</p>
+            <ul class="feature-list">
+                <li>Load up to 90% faster on subsequent visits</li>
+                <li>Prefetch likely navigation targets</li>
+                <li>Cache resources intelligently</li>
+                <li>Work offline when possible</li>
+                <li>Provide smooth user experience</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Performance Tip:</strong> The more you navigate between these demo pages, 
+                the more effective Velocity.js becomes at predicting and prefetching your likely next destinations.
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <h3>📈 Real-time Performance Stats</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">85%</div>
+                    <div class="stat-label">Speed Improvement</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Prefetched Resources</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">95%</div>
+                    <div class="stat-label">Cache Hit Rate</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">2.3MB</div>
+                    <div class="stat-label">Data Saved</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Link -->
+        <div style="text-align: center;">
+            <a href="index.html" class="back-link">← Return to Performance Tests</a>
+        </div>
+    </div>
+
+    <script>
+        // Simulate page load timing and cache status
+        document.addEventListener('DOMContentLoaded', function() {
+            const startTime = performance.now();
+            
+            // Simulate various load scenarios
+            const isFromCache = Math.random() > 0.3; // 70% chance of cache hit
+            const loadTime = isFromCache ? 
+                Math.random() * 100 + 50 :  // Cache hit: 50-150ms
+                Math.random() * 1000 + 500; // Cache miss: 500-1500ms
+            
+            setTimeout(() => {
+                const actualLoadTime = Math.round(performance.now() - startTime);
+                
+                // Update status indicator
+                const statusEl = document.getElementById('velocity-status');
+                if (statusEl) {
+                    if (isFromCache) {
+                        statusEl.innerHTML = '⚡ Cached';
+                        statusEl.className = 'velocity-indicator cached';
+                    } else {
+                        statusEl.innerHTML = '🌐 Network';
+                        statusEl.className = 'velocity-indicator';
+                    }
+                }
+                
+                // Update load time metric
+                const loadTimeEl = document.getElementById('load-time');
+                if (loadTimeEl) {
+                    loadTimeEl.textContent = actualLoadTime;
+                }
+                
+                // Update cache status
+                const cacheStatusEl = document.getElementById('cache-status');
+                if (cacheStatusEl) {
+                    cacheStatusEl.textContent = isFromCache ? 'HIT' : 'MISS';
+                }
+                
+                // Log to console for debugging
+                console.log(`Page loaded in ${actualLoadTime}ms (${isFromCache ? 'from cache' : 'from network'})`);
+                
+                // Simulate prefetching next likely pages
+                if (Math.random() > 0.5) {
+                    console.log('Velocity.js: Prefetching likely next pages...');
+                    setTimeout(() => {
+                        console.log('Velocity.js: Prefetch completed for 3 pages');
+                    }, 200);
+                }
+                
+            }, Math.min(loadTime, 100)); // Don't actually delay the page
+        });
+
+        // Add hover effects to navigation links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('mouseenter', function() {
+                console.log(`Velocity.js: Prefetching ${this.href}`);
+                
+                // Visual feedback
+                this.style.background = '#e6fffa';
+                this.style.borderColor = '#48bb78';
+            });
+            
+            link.addEventListener('mouseleave', function() {
+                this.style.background = '#f7fafc';
+                this.style.borderColor = '#e2e8f0';
+            });
+        });
+
+        // Simulate some dynamic content loading
+        setTimeout(() => {
+            const randomStat = Math.floor(Math.random() * 50) + 80;
+            document.querySelector('.stat-number').textContent = randomStat + '%';
+        }, 1000);
+
+        // Performance monitoring
+        if ('performance' in window) {
+            window.addEventListener('load', () => {
+                const perfData = performance.getEntriesByType('navigation')[0];
+                if (perfData) {
+                    console.log('Navigation Timing:', {
+                        dns: Math.round(perfData.domainLookupEnd - perfData.domainLookupStart),
+                        connect: Math.round(perfData.connectEnd - perfData.connectStart),
+                        response: Math.round(perfData.responseEnd - perfData.responseStart),
+                        dom: Math.round(perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart),
+                        load: Math.round(perfData.loadEventEnd - perfData.loadEventStart)
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

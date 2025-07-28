@@ -12,7 +12,7 @@
         PREFETCH_TIMEOUT: 3000,
         CLEANUP_INTERVAL: 300000, // 5 minutes
         MAX_CONCURRENT_PREFETCH: 3,
-        VISUAL_FEEDBACK: true,
+        VISUAL_FEEDBACK: false,
         DEBUG_MODE: false,
         CACHE_VERSION: '1.0.0',
         PRIORITY_WEIGHTS: {
@@ -74,11 +74,11 @@
                     this.registerServiceWorker()
                 ]);
                 
-                await this.initPerformanceObserver();
+                this.initPerformanceObserver();
                 this.initIntersectionObserver();
                 this.attachEventListeners();
                 this.startCleanupScheduler();
-                this.showVisualFeedback('Velocity initialized');
+                this.showVisualFeedback('Velocity.js initialized');
                 
                 this.log('Velocity initialized successfully');
             } catch (error) {

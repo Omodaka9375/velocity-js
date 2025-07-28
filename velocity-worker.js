@@ -1,4 +1,4 @@
-// velocity-cache-sw.js - Enhanced Service Worker for VelocityCache v2.0
+// velocity-cache-sw.js - Enhanced Service Worker for VelocityCache v1.0
 'use strict';
 
 // Configuration
