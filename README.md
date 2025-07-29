@@ -2,11 +2,7 @@
 
 > The ultimate browser performance library for lightning-fast web experiences
 
-[![npm version](https://badge.fury.io/js/velocity-js.svg)](https://www.npmjs.com/package/velocity-js)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/velocity-js?label=gzipped)](https://bundlephobia.com/package/velocity-js)
-
-Velocity.js is an intelligent performance optimization library that **dramatically speeds up** your website by predicting and prefetching resources before users need them. Using advanced caching strategies, machine learning-like user behavior analysis, and service worker technology, Velocity.js can **reduce page load times by up to 90%**.
+<b>Velocity.js</b> is an intelligent performance optimization library that **dramatically speeds up** your website by predicting and prefetching resources before users need them. Using advanced caching strategies, machine learning-like user behavior analysis, and service worker technology, Velocity.js can **reduce page load times by up to 90%**.
 
 ## ✨ Features
 
