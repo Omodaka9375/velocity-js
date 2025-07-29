@@ -281,7 +281,6 @@ Apache-2.0 license © [Branislav Djalic](https://github.com/Omodaka9375)
 
 ## 📞 Support
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Omodaka9375/velocity-js/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/velocity-js/discussions)
 - 🐦 **Twitter**: [@LordOfThePies4](https://x.com/LordOfThePies4)
 
 **Made with ⚡ by developers, for developers**
