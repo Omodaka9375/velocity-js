@@ -2,6 +2,8 @@
 
 > The ultimate browser performance library for lightning-fast web experiences
 
+![velocity](https://github.com/user-attachments/assets/7824db91-20c1-4a1a-a5f5-04d2d7b970ef)
+
 <b>Velocity.js</b> is an intelligent performance optimization library that **dramatically speeds up** your website by predicting and prefetching resources before users need them. Using advanced caching strategies, user behavior analysis, and service worker technology, Velocity.js can **reduce page load times by up to 90%**.
 
 ## ✨ Features
