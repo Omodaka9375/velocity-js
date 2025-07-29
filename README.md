@@ -264,6 +264,7 @@ Apache-2.0 license © [Branislav Djalic](https://github.com/Omodaka9375)
 ---
 
 ## 📞 Support
+- 🤝 **Buy me a coffee**: [https://coff.ee/omodaka9375](https://coff.ee/omodaka9375)
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Omodaka9375/velocity-js/issues)
 - 🐦 **Twitter**: [@LordOfThePies4](https://x.com/LordOfThePies4)
 
