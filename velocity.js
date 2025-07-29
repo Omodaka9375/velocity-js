@@ -740,7 +740,7 @@ async storeInCache(url, trigger, priority) {
             clearTimeout(feedback.hideTimeout);
             feedback.hideTimeout = setTimeout(() => {
                 feedback.style.opacity = '0';
-            }, 2000);
+            }, 1500);
         }
 
         // Performance entry handler
