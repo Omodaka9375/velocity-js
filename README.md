@@ -2,12 +2,12 @@
 
 > The ultimate browser performance library for lightning-fast web experiences
 
-<b>Velocity.js</b> is an intelligent performance optimization library that **dramatically speeds up** your website by predicting and prefetching resources before users need them. Using advanced caching strategies, machine learning-like user behavior analysis, and service worker technology, Velocity.js can **reduce page load times by up to 90%**.
+<b>Velocity.js</b> is an intelligent performance optimization library that **dramatically speeds up** your website by predicting and prefetching resources before users need them. Using advanced caching strategies, user behavior analysis, and service worker technology, Velocity.js can **reduce page load times by up to 90%**.
 
 ## ✨ Features
 
 ### 🧠 **Intelligent Prefetching**
-- **Predictive loading** based on user behavior (hover, touch, scroll)
+- **Predictive loading** based on user behavior (hover, touch, scroll, visibility)
 - **Smart prioritization** system with customizable weights
 - **Intersection Observer** integration for visible link detection
 - **Subresource prefetching** for critical CSS/JS files
@@ -38,27 +38,15 @@
 
 ## 🚀 Quick Start
 
-### Installation
-
-```bash
-npm install velocity-js
-```
-
-Or via CDN:
-```html
-<script src="https://unpkg.com/velocity-js@latest/dist/velocity.min.js"></script>
-```
-
-### Basic Usage
-
 1. **Include the library** in your HTML:
 ```html
-<script src="velocity.min.js"></script>
+<script src="velocity.min.js" type="application/javascript"></script>
 ```
 
-2. **Add the service worker** to your public directory:
+2. **Add the velocity service worker script** to your public directory:
 ```
 public/
+├── velocity.min.js
 ├── velocity-worker.js
 └── index.html
 ```
