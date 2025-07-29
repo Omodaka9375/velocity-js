@@ -4,7 +4,7 @@
     "type": "commonjs",
     "description": "Intelligent performance optimization library that dramatically speeds up your website by predicting and prefetching resources before users need them!",
     "main": "velocity.min.js",
-    "homepage": "https://omodaka9375.github.io/velocity-js/",
+    "homepage": "https://github.com/Omodaka9375/velocity-js",
     "scripts": {
         "test": ""
     },
