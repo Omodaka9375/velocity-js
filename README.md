@@ -38,7 +38,6 @@ Velocity.js is an intelligent performance optimization library that **dramatical
 - **Zero configuration** - works out of the box
 - **Fully configurable** for advanced use cases
 - **Visual feedback** system (optional)
-- **TypeScript support** with full type definitions
 - **Debug mode** for development
 
 ## 🚀 Quick Start
@@ -58,7 +57,7 @@ Or via CDN:
 
 1. **Include the library** in your HTML:
 ```html
-<script src="velocity.js"></script>
+<script src="velocity.min.js"></script>
 ```
 
 2. **Add the service worker** to your public directory:
@@ -88,13 +87,7 @@ const velocity = Velocity.init({
 
 // Get performance statistics
 const stats = await velocity.getCacheStats();
-console.log('Cache performance:', stats);
-
-// Manual prefetch
-await velocity.prefetchUrl('https://example.com/important-page');
-
-// Clear cache
-await velocity.clearCache();
+console.log('Cache stats:', stats);
 ```
 
 ## 📈 Performance Impact
@@ -106,7 +99,7 @@ await velocity.clearCache();
 | **Time to Interactive** | 5.2s | 1.1s | **79% faster** |
 | **Cache Hit Rate** | 0% | 85% | **∞ improvement** |
 
-*Results from real-world testing on a typical e-commerce site*
+*Results from real-world testing on a typical e-commerce site, your results may vary*
 
 ## 🛠️ Configuration Options
 
@@ -151,7 +144,7 @@ Velocity.getInstance(): VelocityInstance | null
 
 // Instance methods
 instance.getCacheStats(): Promise<CacheStats>
-instance.prefetchUrl(url: string): Promise<void>
+instance.prefetchResources({url: string, priority: number, trigger: string}): Promise<void>
 instance.clearCache(): Promise<void>
 instance.invalidateCache(pattern: RegExp): Promise<void>
 instance.updateConfig(newConfig: Partial<VelocityConfig>): void
@@ -275,47 +268,21 @@ Velocity.init({
 });
 ```
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/velocity-js.git
-
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Run tests
-npm test
-
-# Build for production
-npm run build
-```
-
 ## 📄 License
 
-MIT © [Branislav Djalic](https://github.com/Omodaka9375)
+Apache-2.0 license © [Branislav Djalic](https://github.com/Omodaka9375)
 
 ## 🙏 Acknowledgments
 
 - Inspired by modern performance optimization techniques
 - Built with ❤️ for the web development community
-- Special thanks to all contributors and testers
 
 ---
 
 ## 📞 Support
-
-- 📖 **Documentation**: [Full API docs](https://velocity-js.dev/docs)
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/yourusername/velocity-js/issues)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Omodaka9375/velocity-js/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/velocity-js/discussions)
-- 🐦 **Twitter**: [@VelocityJS](https://twitter.com/velocityjs)
+- 🐦 **Twitter**: [@LordOfThePies4](https://x.com/LordOfThePies4)
 
 **Made with ⚡ by developers, for developers**
 

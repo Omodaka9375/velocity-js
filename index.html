@@ -37,6 +37,7 @@
             font-size: 3rem;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            padding-left: 20px;
         }
 
         .header p {
@@ -380,7 +381,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Velocity.js ⚡</h1>
+            <h1>Velocity.js⚡</h1>
             <p>Performance Testing Suite</p>
         </div>
 
@@ -408,6 +409,25 @@
         </div>
 
         <div class="test-grid">
+
+            <!-- Network Strategy Test -->
+            <div class="test-card">
+                <h3>🌐 Service Worker Test</h3>
+                <p>Test Service Worker registration and different caching strategies in real-time.</p>
+                <button class="btn" onclick="testServiceWorker()">Test Service Worker</button>
+                <button class="btn btn-secondary" onclick="checkNetworkStrategies()">Check Strategies</button>
+                <div id="network-results" class="performance-metrics"></div>
+            </div>
+
+            <!-- Real-time Analytics -->
+            <div class="test-card">
+                <h3>📊 Real-time Analytics</h3>
+                <p>Monitor actual Velocity.js performance metrics and resource usage in real-time.</p>
+                <button class="btn" onclick="startRealTimeMonitoring()">Start Monitoring</button>
+                <button class="btn btn-secondary" onclick="exportMetrics()">Export Data</button>
+                <div id="analytics-display" class="performance-metrics"></div>
+            </div>
+
             <!-- Performance Comparison Test -->
             <div class="test-card">
                 <h3>🏎️ Load Speed Comparison</h3>
@@ -431,7 +451,7 @@
                 <h3>🔮 Smart Prefetch Demo</h3>
                 <p>Hover over links to see real Velocity.js prefetching. Links will change color when prefetched.</p>
                 <button class="btn" onclick="generateTestLinks()">Generate Test Links</button>
-                <button class="btn btn-secondary" onclick="monitorPrefetchActivity()">Monitor Activity</button>
+                <!-- <button class="btn btn-secondary" onclick="monitorPrefetchActivity()">Monitor Activity</button> -->
                 <div id="test-links" class="demo-links"></div>
             </div>
 
@@ -447,27 +467,9 @@
                  <div id="cache-metrics" class="performance-metrics"></div>
              </div>
 
-            <!-- Network Strategy Test -->
-            <div class="test-card">
-                <h3>🌐 Service Worker Integration</h3>
-                <p>Test Service Worker registration and different caching strategies in real-time.</p>
-                <button class="btn" onclick="testServiceWorker()">Test Service Worker</button>
-                <button class="btn btn-secondary" onclick="checkNetworkStrategies()">Check Strategies</button>
-                <div id="network-results" class="performance-metrics"></div>
-            </div>
-
-            <!-- Real-time Analytics -->
-            <div class="test-card">
-                <h3>📊 Real-time Analytics</h3>
-                <p>Monitor actual Velocity.js performance metrics and resource usage in real-time.</p>
-                <button class="btn" onclick="startRealTimeMonitoring()">Start Monitoring</button>
-                <button class="btn btn-secondary" onclick="exportMetrics()">Export Data</button>
-                <div id="analytics-display" class="performance-metrics"></div>
-            </div>
-
             <!-- Memory Usage Test -->
             <div class="test-card">
-                <h3>🧠 Memory & Storage Analysis</h3>
+                <h3>🧠 Memory & Storage</h3>
                 <p>Monitor IndexedDB usage, memory efficiency, and cleanup operations.</p>
                 <button class="btn" onclick="runMemoryAnalysis()">Analyze Memory</button>
                 <button class="btn btn-danger" onclick="forceCleanup()">Force Cleanup</button>
@@ -476,7 +478,7 @@
         </div>
         <!-- Test Results -->
         <div class="results">
-            <h3>📈 Velocity.js Results & Real-Time Logs</h3>
+            <h3>📈 Results & Logs</h3>
             <div id="test-results">
                 <div class="metric">
                     <span class="metric-name">Average Load Time Improvement</span>
@@ -556,9 +558,7 @@
 
             try {
                 const stats = await velocityInstance.getCacheStats();
-                
                 document.getElementById('cache-size').textContent = stats?.totalEntries || 0;
-                document.getElementById('hit-rate').textContent = 0 + '%';
                 document.getElementById('prefetch-count').textContent = stats?.prefetchedUrls || 0;
                 
                 // Check memory usage if available
@@ -593,11 +593,11 @@ async function runLoadSpeedTest() {
     log('Starting real load speed comparison...', 'info');
     
     const testUrls = [
-        'demo-1.html',
-        'demo-2.html', 
-        'demo-3.html',
-        'demo-4.html',
-        'demo-5.html'
+        'test/demo-1.html',
+        'test/demo-2.html', 
+        'test/demo-3.html',
+        'test/demo-4.html',
+        'test/demo-5.html'
     ];
 
     let coldLoadTimes = [];
@@ -677,7 +677,7 @@ async function runCacheTest() {
     
     const testUrls = [];
     for (let i = 1; i <= 10; i++) {
-        testUrls.push(`demo-${i}.html`);
+        testUrls.push(`test/demo-${i}.html`);
     }
 
     // Phase 1: Simulate user interactions to populate cache (like clicking demo pages)
@@ -716,7 +716,7 @@ async function runCacheTest() {
 
     // Wait for all prefetches and cache operations to complete
     log('Waiting for cache operations to complete...', 'info');
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Phase 2: Check multiple cache locations
     log('Phase 2: Checking cache hits and misses...', 'info');
@@ -910,16 +910,16 @@ function generateTestLinks() {
     if (!container) return;
 
     const pages = [
-        { name: 'Demo Page 1', url: 'demo-1.html' },
-        { name: 'Demo Page 2', url: 'demo-2.html' },
-        { name: 'Demo Page 3', url: 'demo-3.html' },
-        { name: 'Demo Page 4', url: 'demo-4.html' },
-        { name: 'Demo Page 5', url: 'demo-5.html' },
-        { name: 'Demo Page 6', url: 'demo-6.html' },
-        { name: 'Demo Page 7', url: 'demo-7.html' },
-        { name: 'Demo Page 8', url: 'demo-8.html' },
-        { name: 'Demo Page 9', url: 'demo-9.html' },
-        { name: 'Demo Page 10', url: 'demo-10.html' }
+        { name: 'Page 1', url: 'test/demo-1.html' },
+        { name: 'Page 2', url: 'test/demo-2.html' },
+        { name: 'Page 3', url: 'test/demo-3.html' },
+        { name: 'Page 4', url: 'test/demo-4.html' },
+        { name: 'Page 5', url: 'test/demo-5.html' },
+        { name: 'Page 6', url: 'test/demo-6.html' },
+        { name: 'Page 7', url: 'test/demo-7.html' },
+        { name: 'Page 8', url: 'test/demo-8.html' },
+        { name: 'Page 9', url: 'test/demo-9.html' },
+        { name: 'Page 10', url: 'test/demo-10.html' }
     ];
 
     container.innerHTML = '';
@@ -1029,11 +1029,11 @@ async function bulkPrefetchTest() {
     log('Running bulk prefetch test...', 'info');
     
     const urls = [
-        'demo-1.html',
-        'demo-2.html',
-        'demo-3.html',
-        'demo-4.html',
-        'demo-5.html'
+        'test/demo-1.html',
+        'test/demo-2.html',
+        'test/demo-3.html',
+        'test/demo-4.html',
+        'test/demo-5.html'
     ];
 
     const prefetchPromises = urls.map((url, index) => 
@@ -1059,32 +1059,22 @@ async function bulkPrefetchTest() {
     }
 }
 
-// Add a new test button for bulk prefetching (add this to the HTML if desired)
-function addBulkPrefetchTest() {
-    // This can be added to one of the test cards
-    const bulkTestHtml = `
-        <button class="btn btn-secondary" onclick="bulkPrefetchTest()">Bulk Prefetch Test</button>
-    `;
-    
-    // You can add this button to any test card by appending to its innerHTML
-}
-
         // Generate test links with real prefetching
         function generateTestLinks() {
             const container = document.getElementById('test-links');
             if (!container) return;
 
             const pages = [
-                { name: 'Demo Page 1', url: 'demo-1.html' },
-                { name: 'Demo Page 2', url: 'demo-2.html' },
-                { name: 'Demo Page 3', url: 'demo-3.html' },
-                { name: 'Demo Page 4', url: 'demo-4.html' },
-                { name: 'Demo Page 5', url: 'demo-5.html' },
-                { name: 'Demo Page 6', url: 'demo-6.html' },
-                { name: 'Demo Page 7', url: 'demo-7.html' },
-                { name: 'Demo Page 8', url: 'demo-8.html' },
-                { name: 'Demo Page 9', url: 'demo-9.html' },
-                { name: 'Demo Page 10', url: 'demo-10.html' }
+                { name: 'Page 1', url: 'test/demo-1.html' },
+                { name: 'Page 2', url: 'test/demo-2.html' },
+                { name: 'Page 3', url: 'test/demo-3.html' },
+                { name: 'Page 4', url: 'test/demo-4.html' },
+                { name: 'Page 5', url: 'test/demo-5.html' },
+                { name: 'Page 6', url: 'test/demo-6.html' },
+                { name: 'Page 7', url: 'test/demo-7.html' },
+                { name: 'Page 8', url: 'test/demo-8.html' },
+                { name: 'Page 9', url: 'test/demo-9.html' },
+                { name: 'Page 10', url: 'test/demo-10.html' }
             ];
 
             container.innerHTML = '';
@@ -1214,14 +1204,14 @@ function addBulkPrefetchTest() {
                 }
             }, 2000);
 
-            // Stop after 30 seconds
+            // Stop after 5 min seconds
             setTimeout(() => {
                 if (monitoringInterval) {
                     clearInterval(monitoringInterval);
                     monitoringInterval = null;
                     log('Real-time monitoring stopped automatically', 'info');
                 }
-            }, 30000);
+            }, 300000 );
         }
 
         // Memory analysis
@@ -1285,6 +1275,7 @@ function addBulkPrefetchTest() {
                         log(`${key}: ${JSON.stringify(value)}`, 'info');
                     });
                 }
+                velocityInstance.showVisualFeedback('Check Dev Console')
             } catch (error) {
                 log('Error viewing cache: ' + error.message, 'error');
             }
@@ -1304,25 +1295,31 @@ function addBulkPrefetchTest() {
         }
 
         function checkNetworkStrategies() {
+            var sw, ch, bc = false
             log('Checking network strategies...', 'info');
             
             if ('serviceWorker' in navigator) {
                 log('Service Worker API: ✓ Available', 'success');
+                sw = true
             } else {
                 log('Service Worker API: ✗ Not available', 'error');
             }
             
             if ('caches' in window) {
                 log('Cache API: ✓ Available', 'success');
+                ch = true
             } else {
                 log('Cache API: ✗ Not available', 'error');
             }
             
             if ('BroadcastChannel' in window) {
                 log('BroadcastChannel API: ✓ Available', 'success');
+                bc = true
             } else {
                 log('BroadcastChannel API: ✗ Not available', 'error');
             }
+            var msg = `Service Worker API: ${sw}, Cache API: ${ch}, Broadcast API: ${bc}`;
+            velocityInstance.showVisualFeedback(msg)
         }
 
         async function forceCleanup() {

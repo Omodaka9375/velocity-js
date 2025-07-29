@@ -657,6 +657,25 @@ async storeInCache(url, trigger, priority) {
                 }
             }
         }
+        async clearCache(){
+            try {
+                  
+                // Clear browser caches
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    );
+                    log(`Cleared ${cacheNames.length} browser caches`, 'success');
+                }
+                
+                updateStats();
+                log('Cleanup completed', 'success');
+                
+            } catch (error) {
+                log('Cleanup error: ' + error.message, 'error');
+            }
+        }
 
         // Enhanced cache invalidation
         async invalidateCache(urlPattern) {
@@ -707,7 +726,7 @@ async storeInCache(url, trigger, priority) {
                     color: white;
                     padding: 8px 12px;
                     border-radius: 4px;
-                    font-size: 12px;
+                    font-size: 16px;
                     z-index: 10000;
                     transition: opacity 0.3s ease;
                     pointer-events: none;
