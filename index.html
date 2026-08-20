@@ -107,6 +107,26 @@
             transform: none;
         }
 
+        .btn.running {
+            position: relative;
+        }
+
+        .btn.running::after {
+            content: '⏳';
+            margin-left: 8px;
+        }
+
+        .card-status {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #4a5568;
+            font-style: italic;
+            min-height: 1.2em;
+        }
+
+        .card-status.ok { color: #38a169; font-style: normal; }
+        .card-status.err { color: #e53e3e; font-style: normal; }
+
         .btn-secondary {
             background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
         }
@@ -422,6 +442,7 @@
                 <button class="btn" onclick="testServiceWorker()">Test Service Worker</button>
                 <button class="btn btn-secondary" onclick="checkNetworkStrategies()">Check Strategies</button>
                 <div id="network-results" class="performance-metrics"></div>
+                <div class="card-status" id="sw-card-status"></div>
             </div>
 
             <!-- Real-time Analytics -->
@@ -439,6 +460,7 @@
                 <p>Compare actual page load times with and without Velocity.js by measuring real navigation performance.</p>
                 <button class="btn" onclick="runLoadSpeedTest()">Run Speed Test</button>
                 <button class="btn btn-secondary" onclick="clearVelocityCache()">Clear Cache</button>
+                <div class="card-status" id="speed-card-status"></div>
                 <div id="speed-results" class="comparison-chart" style="display: none;">
                     <div class="chart-bar">
                         <div class="chart-bar-fill" id="without-velocity" data-value="0ms"></div>
@@ -466,6 +488,7 @@
                  <p>Test real caching efficiency by monitoring IndexedDB and Service Worker cache performance.</p>
                  <button class="btn" onclick="runCacheTest()">Test Cache Performance</button>
                  <button class="btn btn-secondary" onclick="viewCacheContents()">View Cache Contents</button>
+                 <div class="card-status" id="cache-card-status"></div>
                  <div class="progress">
                      <div class="progress-bar" id="cache-progress"></div>
                  </div>
@@ -479,6 +502,7 @@
                 <button class="btn" onclick="runMemoryAnalysis()">Analyze Memory</button>
                 <button class="btn btn-danger" onclick="forceCleanup()">Force Cleanup</button>
                 <div id="memory-results" class="performance-metrics"></div>
+                <div class="card-status" id="memory-card-status"></div>
             </div>
         </div>
         <!-- Test Results -->
@@ -513,6 +537,26 @@
             cacheMisses: 0,
             prefetchCount: 0
         };
+
+        // Busy-state helper: disable the clicked button + mark running, show status text
+        function setBusy(btn, statusId, msg) {
+            if (btn) { btn.disabled = true; btn.classList.add('running'); }
+            setStatus(statusId, msg, '');
+        }
+        function clearBusy(btn, statusId, msg, ok = true) {
+            if (btn) { btn.disabled = false; btn.classList.remove('running'); }
+            if (msg !== undefined) setStatus(statusId, msg, ok ? 'ok' : 'err');
+        }
+        function setStatus(statusId, msg, cls) {
+            const el = document.getElementById(statusId);
+            if (el) { el.textContent = msg || ''; el.className = 'card-status ' + (cls || ''); }
+        }
+        // Get the button that triggered the handler (from the event), else find by onclick attr
+        function activeBtn(fnName) {
+            const ev = window.event;
+            if (ev && ev.target && ev.target.tagName === 'BUTTON') return ev.target;
+            return document.querySelector(`button[onclick^="${fnName}("]`);
+        }
 
         // Initialize Velocity.js and update status
         async function initializeVelocity() {
@@ -565,6 +609,11 @@
                 const stats = await velocityInstance.getCacheStats();
                 document.getElementById('cache-size').textContent = stats?.totalEntries || 0;
                 document.getElementById('prefetch-count').textContent = stats?.prefetchedUrls || 0;
+
+                // Keep hit-rate stat in sync (0% until a cache test has run)
+                const totalChecks = testResults.cacheHits + testResults.cacheMisses;
+                document.getElementById('hit-rate').textContent =
+                    totalChecks > 0 ? Math.round(testResults.cacheHits / totalChecks * 100) + '%' : '—';
                 
                 // Check memory usage if available
                 if ('storage' in navigator && 'estimate' in navigator.storage) {
@@ -590,11 +639,14 @@
 
 // Fixed: Load speed test with correct prefetchResource function
 async function runLoadSpeedTest() {
+    const btn = activeBtn('runLoadSpeedTest');
     if (!velocityInstance) {
         log('Velocity.js not available for testing', 'error');
+        setStatus('speed-card-status', 'Velocity.js not initialized', 'err');
         return;
     }
 
+    setBusy(btn, 'speed-card-status', 'Running speed test…');
     log('Starting real load speed comparison...', 'info');
     
     const testUrls = [
@@ -666,15 +718,19 @@ async function runLoadSpeedTest() {
 
     log(`Load speed test completed. Average improvement: ${improvement}%`, 'success');
     testResults.loadTimes = { cold: avgCold, velocity: avgVelocity, improvement };
+    clearBusy(btn, 'speed-card-status', `Done — ${improvement}% faster (${Math.round(avgVelocity)}ms vs ${Math.round(avgCold)}ms)`);
 }
 
 // Fixed: Cache performance test that checks the actual cache locations
 async function runCacheTest() {
+    const btn = activeBtn('runCacheTest');
     if (!velocityInstance) {
         log('Velocity.js not available for testing', 'error');
+        setStatus('cache-card-status', 'Velocity.js not initialized', 'err');
         return;
     }
 
+    setBusy(btn, 'cache-card-status', 'Running cache test…');
     log('Running cache performance test...', 'info');
     
     const progressBar = document.getElementById('cache-progress');
@@ -858,7 +914,8 @@ async function runCacheTest() {
     testResults.cacheMisses = misses;
     
     log(`Cache test completed. Final result: ${hitRate}% hit rate (${hits}/${testUrls.length})`, 'success');
-    
+    clearBusy(btn, 'cache-card-status', `Done — ${hitRate}% hit rate (${hits}/${testUrls.length})`);
+
     // Show final cache state
     await showFinalCacheState();
 }
@@ -993,7 +1050,9 @@ function generateTestLinks() {
 // Clear Velocity cache — delegate to the library so IndexedDB,
 // in-memory state AND Cache API buckets are all cleared consistently
 async function clearVelocityCache() {
+    const btn = activeBtn('clearVelocityCache');
     if (velocityInstance) {
+        setBusy(btn, 'speed-card-status', 'Clearing cache…');
         try {
             await velocityInstance.clearCache();
 
@@ -1013,12 +1072,14 @@ async function clearVelocityCache() {
             };
             
             updateStats();
-           // runLoadSpeedTest()
+            clearBusy(btn, 'speed-card-status', 'Cache cleared');
         } catch (error) {
             log('Error clearing cache: ' + error.message, 'error');
+            clearBusy(btn, 'speed-card-status', 'Clear failed: ' + error.message, false);
         }
     } else {
         log('clearCache method not available', 'error');
+        setStatus('speed-card-status', 'Velocity.js not initialized', 'err');
     }
 }
 
@@ -1064,6 +1125,8 @@ async function bulkPrefetchTest() {
 
         // Test Service Worker functionality
         async function testServiceWorker() {
+            const btn = activeBtn('testServiceWorker');
+            setBusy(btn, 'sw-card-status', 'Checking…');
             log('Testing Service Worker integration...', 'info');
             
             const resultsEl = document.getElementById('network-results');
@@ -1107,23 +1170,30 @@ async function bulkPrefetchTest() {
                                 </div>
                             `;
                         }
+                        clearBusy(btn, 'sw-card-status', 'Not registered', false);
                     }
                 } catch (error) {
                     log('Service Worker test error: ' + error.message, 'error');
+                    clearBusy(btn, 'sw-card-status', 'Error: ' + error.message, false);
                 }
             } else {
                 log('Service Worker not supported in this browser', 'error');
+                clearBusy(btn, 'sw-card-status', 'Service Worker not supported', false);
             }
         }
 
         // Real-time monitoring
         function startRealTimeMonitoring() {
+            const btn = activeBtn('startRealTimeMonitoring');
             if (monitoringInterval) {
                 clearInterval(monitoringInterval);
+                monitoringInterval = null;
+                if (btn) btn.textContent = 'Start Monitoring';
                 log('Stopped real-time monitoring', 'info');
                 return;
             }
 
+            if (btn) btn.textContent = 'Stop Monitoring';
             log('Starting real-time monitoring...', 'info');
             
             const displayEl = document.getElementById('analytics-display');
@@ -1156,11 +1226,13 @@ async function bulkPrefetchTest() {
                 }
             }, 2000);
 
-            // Stop after 5 min seconds
+            // Stop after 5 minutes
             setTimeout(() => {
                 if (monitoringInterval) {
                     clearInterval(monitoringInterval);
                     monitoringInterval = null;
+                    const b = document.querySelector('button[onclick^="startRealTimeMonitoring("]');
+                    if (b) b.textContent = 'Start Monitoring';
                     log('Real-time monitoring stopped automatically', 'info');
                 }
             }, 300000 );
@@ -1168,8 +1240,10 @@ async function bulkPrefetchTest() {
 
         // Memory analysis
         async function runMemoryAnalysis() {
+            const btn = activeBtn('runMemoryAnalysis');
+            setBusy(btn, 'memory-card-status', 'Analyzing…');
             log('Running memory analysis...', 'info');
-            
+
             const resultsEl = document.getElementById('memory-results');
             
             try {
@@ -1203,33 +1277,70 @@ async function bulkPrefetchTest() {
                     log('IndexedDB not supported', 'error');
                 }
                 
+                clearBusy(btn, 'memory-card-status', 'Analysis complete');
             } catch (error) {
                 log('Memory analysis error: ' + error.message, 'error');
+                clearBusy(btn, 'memory-card-status', 'Error: ' + error.message, false);
             }
         }
 
 
         async function viewCacheContents() {
+            const btn = activeBtn('viewCacheContents');
+            const statusEl = document.getElementById('cache-card-status');
             if (!velocityInstance) {
                 log('Velocity.js not available', 'error');
+                setStatus('cache-card-status', 'Velocity.js not initialized', 'err');
                 return;
             }
 
+            setBusy(btn, 'cache-card-status', 'Reading cache…');
             try {
                 const stats = await velocityInstance.getCacheStats();
-                log('Cache Statistics:', 'info');
-                log(`Total Entries: ${stats?.totalEntries || 0}`, 'info');
-                log(`Prefetched URLs: ${stats?.prefetchedUrls || 0}`, 'info');
-                //log(`Hit Rate: ${stats?.hitRate || 0}%`, 'info');
-                
-                if (stats?.analytics) {
-                    Object.entries(stats.analytics).forEach(([key, value]) => {
-                        log(`${key}: ${JSON.stringify(value)}`, 'info');
-                    });
+                const metricsEl = document.getElementById('cache-metrics');
+                const analyticsCount = stats?.analytics ? Object.keys(stats.analytics).length : 0;
+
+                if (metricsEl) {
+                    metricsEl.innerHTML = `
+                        <div class="performance-card">
+                            <h4>Cached Entries</h4>
+                            <span class="value">${stats?.totalEntries ?? 0}</span>
+                        </div>
+                        <div class="performance-card">
+                            <h4>Prefetched URLs</h4>
+                            <span class="value">${stats?.prefetchedUrls ?? 0}</span>
+                        </div>
+                        <div class="performance-card">
+                            <h4>Queued</h4>
+                            <span class="value">${stats?.queueSize ?? 0}</span>
+                        </div>
+                        <div class="performance-card">
+                            <h4>Tracked URLs</h4>
+                            <span class="value">${analyticsCount}</span>
+                        </div>
+                    `;
                 }
-                velocityInstance.showVisualFeedback('Check Dev Console')
+
+                // Also list the prefetched URLs themselves so the user sees *what* is cached
+                if (velocityInstance.prefetchedUrls && velocityInstance.prefetchedUrls.size > 0) {
+                    const urls = [...velocityInstance.prefetchedUrls.keys()].slice(0, 5);
+                    const listHtml = '<ul style="margin:8px 0 0 18px;font-size:0.85rem;color:#4a5568;">' +
+                        urls.map(u => `<li>${u}</li>`).join('') +
+                        (velocityInstance.prefetchedUrls.size > 5 ? `<li>…and ${velocityInstance.prefetchedUrls.size - 5} more</li>` : '') +
+                        '</ul>';
+                    if (metricsEl) metricsEl.innerHTML += listHtml;
+                }
+
+                setStatus('cache-card-status',
+                    (stats?.totalEntries || stats?.prefetchedUrls) ? 'Cache populated' : 'Cache is empty — run "Test Cache Performance" or hover some links first',
+                    'ok');
+                log(`Viewed cache: ${stats?.totalEntries || 0} entries, ${stats?.prefetchedUrls || 0} prefetched`, 'info');
             } catch (error) {
                 log('Error viewing cache: ' + error.message, 'error');
+                setStatus('cache-card-status', 'Error: ' + error.message, 'err');
+            } finally {
+                // Release the button without overwriting the status message set above
+                if (btn) { btn.disabled = false; btn.classList.remove('running'); }
             }
         }
 
@@ -1247,7 +1358,7 @@ async function bulkPrefetchTest() {
         }
 
         function checkNetworkStrategies() {
-            var sw, ch, bc = false
+            var sw = false, ch = false, bc = false;
             log('Checking network strategies...', 'info');
             
             if ('serviceWorker' in navigator) {
@@ -1270,17 +1381,24 @@ async function bulkPrefetchTest() {
             } else {
                 log('BroadcastChannel API: ✗ Not available', 'error');
             }
-            var msg = `Service Worker API: ${sw}, Cache API: ${ch}, Broadcast API: ${bc}`;
-            if (velocityInstance) {
-                velocityInstance.showVisualFeedback(msg);
+            var msg = `Service Worker: ${sw ? '✓' : '✗'} · Cache API: ${ch ? '✓' : '✗'} · BroadcastChannel: ${bc ? '✓' : '✗'}`;
+            const resultsEl = document.getElementById('network-results');
+            if (resultsEl) {
+                resultsEl.innerHTML = `
+                    <div class="performance-card"><h4>Service Worker</h4><span class="value" style="color:${sw ? '#48bb78' : '#f56565'}">${sw ? '✓' : '✗'}</span></div>
+                    <div class="performance-card"><h4>Cache API</h4><span class="value" style="color:${ch ? '#48bb78' : '#f56565'}">${ch ? '✓' : '✗'}</span></div>
+                    <div class="performance-card"><h4>BroadcastChannel</h4><span class="value" style="color:${bc ? '#48bb78' : '#f56565'}">${bc ? '✓' : '✗'}</span></div>
+                `;
             }
+            setStatus('sw-card-status', msg, (sw && ch && bc) ? 'ok' : 'err');
         }
 
         async function forceCleanup() {
+            const btn = activeBtn('forceCleanup');
+            setBusy(btn, 'memory-card-status', 'Cleaning up…');
             log('Forcing cache cleanup...', 'info');
-            
+
             try {
-                  
                 // Clear browser caches
                 if ('caches' in window) {
                     const cacheNames = await caches.keys();
@@ -1289,12 +1407,14 @@ async function bulkPrefetchTest() {
                     );
                     log(`Cleared ${cacheNames.length} browser caches`, 'success');
                 }
-                
+
                 updateStats();
                 log('Cleanup completed', 'success');
-                
+                clearBusy(btn, 'memory-card-status', 'Cleanup complete');
+
             } catch (error) {
                 log('Cleanup error: ' + error.message, 'error');
+                clearBusy(btn, 'memory-card-status', 'Cleanup failed: ' + error.message, false);
             }
         }
 
