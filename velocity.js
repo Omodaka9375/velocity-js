@@ -54,8 +54,8 @@
             this.isServiceWorkerReady = false;
             this.broadcastChannel = null;
             this.performanceObserver = null;
-            this.cleanupWorker = null;
             this.prefetchSemaphore = 0;
+            this.pendingAbortControllers = new Map();
             this.urlAnalytics = new Map();
             this.intersectionObserver = null;
             
@@ -77,6 +77,7 @@
                 this.initPerformanceObserver();
                 this.initIntersectionObserver();
                 this.attachEventListeners();
+                this.attachOnlineOfflineListeners();
                 this.startCleanupScheduler();
                 this.showVisualFeedback('Velocity.js initialized');
                 
@@ -226,26 +227,47 @@
 
         // Enhanced event listeners with passive options
         attachEventListeners() {
-            const passiveOptions = { passive: true, capture: true };
-            
-            document.addEventListener('touchstart', this.handleTouchStart.bind(this), passiveOptions);
-            document.addEventListener('mouseover', this.handleMouseOver.bind(this), passiveOptions);
-            document.addEventListener('click', this.handleClick.bind(this), passiveOptions);
-            document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-            
+            this._listenerOptions = { passive: true, capture: true };
+
+            // Keep bound references so listeners can be removed in destroy()
+            this._eventHandlers = {
+                touchstart: this.handleTouchStart.bind(this),
+                mouseover: this.handleMouseOver.bind(this),
+                click: this.handleClick.bind(this),
+                visibilitychange: this.handleVisibilityChange.bind(this)
+            };
+
+            document.addEventListener('touchstart', this._eventHandlers.touchstart, this._listenerOptions);
+            document.addEventListener('mouseover', this._eventHandlers.mouseover, this._listenerOptions);
+            document.addEventListener('click', this._eventHandlers.click, this._listenerOptions);
+            document.addEventListener('visibilitychange', this._eventHandlers.visibilitychange);
+
             // Observe all links for visibility
             this.observeLinks();
-            
+
             // Re-observe when DOM changes
             if ('MutationObserver' in window) {
-                const mutationObserver = new MutationObserver(() => {
+                this.mutationObserver = new MutationObserver(() => {
                     this.observeLinks();
                 });
-                mutationObserver.observe(document.body, { 
-                    childList: true, 
-                    subtree: true 
+                this.mutationObserver.observe(document.body, {
+                    childList: true,
+                    subtree: true
                 });
             }
+        }
+
+        // Relay Window online/offline events to the Service Worker, which
+        // cannot listen for them directly (they don't fire on its global scope).
+        attachOnlineOfflineListeners() {
+            this._onlineHandler = () => {
+                this.broadcastChannel?.postMessage({ type: 'ONLINE_STATUS', isOnline: true });
+            };
+            this._offlineHandler = () => {
+                this.broadcastChannel?.postMessage({ type: 'ONLINE_STATUS', isOnline: false });
+            };
+            window.addEventListener('online', this._onlineHandler);
+            window.addEventListener('offline', this._offlineHandler);
         }
 
         // Observe links for intersection
@@ -325,6 +347,7 @@
 
         // Enhanced link processing with queue management
         async processLink(url, trigger, priority = 1) {
+            if (this.isPaused) return;
             if (!this.isValidUrl(url)) return;
 
             const sanitizedUrl = this.sanitizeUrl(url);
@@ -354,6 +377,7 @@
 
         // Smart queue processing with concurrency control
         async processQueue() {
+            if (this.isPaused) return;
             if (this.prefetchSemaphore >= this.config.MAX_CONCURRENT_PREFETCH) {
                 return; // Too many concurrent requests
             }
@@ -370,7 +394,7 @@
                 
                 this.prefetchResource(item)
                     .finally(() => {
-                        this.prefetchSemaphore--;
+                        this.prefetchSemaphore = Math.max(0, this.prefetchSemaphore - 1);
                     });
             }
         }
@@ -517,76 +541,76 @@
             return sanitized;
         }
 
-// Enhanced cache storage with LRU eviction - FIXED VERSION
+// Enhanced cache storage with LRU eviction — deduplicated
 async storeInCache(url, trigger, priority) {
     if (!this.db) return;
 
-    try {
-        const content = await this.fetchAndSanitizeContent(url);
-        
-        const cacheEntry = {
-            url,
-            timestamp: Date.now(),
-            lastAccessed: Date.now(),
-            accessCount: 1,
-            trigger,
-            priority,
-            content,
-            version: this.config.CACHE_VERSION
-        };
+    // Prevent duplicate concurrent store requests for the same URL
+    if (!this._inFlightStores) this._inFlightStores = new Map();
+    if (this._inFlightStores.has(url)) return this._inFlightStores.get(url);
 
-        // Create a single transaction for the entire operation
-        const transaction = this.db.transaction([this.config.STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(this.config.STORE_NAME);
-        
-        // First, try to get existing entry
-        const existingRequest = store.get(url);
-        
-        await new Promise((resolve, reject) => {
-            existingRequest.onsuccess = () => {
-                if (existingRequest.result) {
-                    cacheEntry.accessCount = existingRequest.result.accessCount + 1;
-                }
-                
-                // Put the updated entry in the same transaction
-                const putRequest = store.put(cacheEntry);
-                putRequest.onsuccess = () => resolve();
-                putRequest.onerror = () => reject(putRequest.error);
-            };
-            
-            existingRequest.onerror = () => {
-                // If get fails, just put the new entry
-                const putRequest = store.put(cacheEntry);
-                putRequest.onsuccess = () => resolve();
-                putRequest.onerror = () => reject(putRequest.error);
-            };
-        });
+    const storePromise = (async () => {
+        try {
+            const content = await this.fetchAndSanitizeContent(url);
 
-        await this.cleanupOldEntries();
-    } catch (error) {
-        this.logError('Failed to store in cache:', error);
-    }
+            const cacheEntry = {
+                url,
+                timestamp: Date.now(),
+                lastAccessed: Date.now(),
+                accessCount: 1,
+                trigger,
+                priority,
+                content,
+                version: this.config.CACHE_VERSION
+            };
+
+            // Create a single transaction for the entire operation
+            const transaction = this.db.transaction([this.config.STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(this.config.STORE_NAME);
+
+            // First, try to get existing entry
+            const existingRequest = store.get(url);
+
+            await new Promise((resolve, reject) => {
+                existingRequest.onsuccess = () => {
+                    if (existingRequest.result) {
+                        cacheEntry.accessCount = existingRequest.result.accessCount + 1;
+                    }
+
+                    // Put the updated entry in the same transaction
+                    const putRequest = store.put(cacheEntry);
+                    putRequest.onsuccess = () => resolve();
+                    putRequest.onerror = () => reject(putRequest.error);
+                };
+
+                existingRequest.onerror = () => {
+                    // If get fails, just put the new entry
+                    const putRequest = store.put(cacheEntry);
+                    putRequest.onsuccess = () => resolve();
+                    putRequest.onerror = () => reject(putRequest.error);
+                };
+            });
+
+            await this.cleanupOldEntries();
+        } catch (error) {
+            this.logError('Failed to store in cache:', error);
+        } finally {
+            this._inFlightStores.delete(url);
+        }
+    })();
+
+    this._inFlightStores.set(url, storePromise);
+    return storePromise;
 }
 
         // LRU-based cleanup with background processing
         async cleanupOldEntries() {
             if (!this.db) return;
 
-            // Use Web Worker for cleanup if available
-            if (this.cleanupWorker) {
-                this.cleanupWorker.postMessage({
-                    type: 'CLEANUP',
-                    dbName: this.config.DB_NAME,
-                    storeName: this.config.STORE_NAME,
-                    maxEntries: this.config.MAX_CACHED_LINKS
-                });
-                return;
-            }
-
-            // Fallback to main thread cleanup
+            // Main thread cleanup
             try {
                 const transaction = this.db.transaction([this.config.STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(DEFAULT_CONFIG.STORE_NAME);
+                const store = transaction.objectStore(this.config.STORE_NAME);
                 
                 const countRequest = store.count();
                 const count = await new Promise((resolve) => {
@@ -630,50 +654,48 @@ async storeInCache(url, trigger, priority) {
             }
         }
 
-        // Initialize cleanup web worker
-        initCleanupWorker() {
-            if ('Worker' in window) {
-                try {
-                    const workerCode = `
-                        self.onmessage = function(e) {
-                            if (e.data.type === 'CLEANUP') {
-                                // Implement IndexedDB cleanup in worker
-                                // This is a simplified version - full implementation would mirror main thread logic
-                                self.postMessage({ type: 'CLEANUP_COMPLETE', success: true });
-                            }
-                        };
-                    `;
-                    
-                    const blob = new Blob([workerCode], { type: 'application/javascript' });
-                    this.cleanupWorker = new Worker(URL.createObjectURL(blob));
-                    
-                    this.cleanupWorker.onmessage = (e) => {
-                        if (e.data.type === 'CLEANUP_COMPLETE') {
-                            this.log('Background cleanup completed');
-                        }
-                    };
-                } catch (error) {
-                    this.logError('Failed to create cleanup worker:', error);
-                }
-            }
-        }
-        async clearCache(){
+        // Clear cache — removes all stored data (in-memory, IndexedDB, and Cache API)
+        async clearCache() {
             try {
                   
+                // Clear in-memory state
+                this.prefetchedUrls.clear();
+                this.prerenderedUrls.clear();
+                this.urlAnalytics.clear();
+                this.prefetchQueue.clear();
+
+                // Clear IndexedDB stores
+                if (this.db) {
+                    const tx = this.db.transaction(
+                        [this.config.STORE_NAME, this.config.ANALYTICS_STORE], 'readwrite'
+                    );
+                    await Promise.all([
+                        new Promise((resolve, reject) => {
+                            const req = tx.objectStore(this.config.STORE_NAME).clear();
+                            req.onsuccess = () => resolve();
+                            req.onerror = () => reject(req.error);
+                        }),
+                        new Promise((resolve, reject) => {
+                            const req = tx.objectStore(this.config.ANALYTICS_STORE).clear();
+                            req.onsuccess = () => resolve();
+                            req.onerror = () => reject(req.error);
+                        })
+                    ]);
+                }
+
                 // Clear browser caches
                 if ('caches' in window) {
                     const cacheNames = await caches.keys();
                     await Promise.all(
                         cacheNames.map(cacheName => caches.delete(cacheName))
                     );
-                    log(`Cleared ${cacheNames.length} browser caches`, 'success');
+                    this.log(`Cleared ${cacheNames.length} browser caches`, 'success');
                 }
-                
-                updateStats();
-                log('Cleanup completed', 'success');
-                
+
+                this.log('Cleanup completed', 'success');
+
             } catch (error) {
-                log('Cleanup error: ' + error.message, 'error');
+                this.logError('Cleanup error: ' + error.message);
             }
         }
 
@@ -682,14 +704,18 @@ async storeInCache(url, trigger, priority) {
             if (!this.db) return;
 
             try {
+                // Escape regex-special characters for safe literal matching
+                const escapedPattern = String(urlPattern).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(escapedPattern);
+
                 const transaction = this.db.transaction([this.config.STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(DEFAULT_CONFIG.STORE_NAME);
-                
+                const store = transaction.objectStore(this.config.STORE_NAME);
+
                 const request = store.openCursor();
                 request.onsuccess = (event) => {
                     const cursor = event.target.result;
                     if (cursor) {
-                        if (cursor.value.url.match(urlPattern)) {
+                        if (regex.test(cursor.value.url)) {
                             cursor.delete();
                             this.prefetchedUrls.delete(cursor.value.url);
                         }
@@ -780,7 +806,7 @@ async storeInCache(url, trigger, priority) {
 
         // Cleanup scheduler
         startCleanupScheduler() {
-            setInterval(() => {
+            this.cleanupIntervalId = setInterval(() => {
                 this.cleanupOldEntries();
             }, this.config.CLEANUP_INTERVAL);
         }
@@ -788,6 +814,13 @@ async storeInCache(url, trigger, priority) {
         // Pause/resume functionality
         pausePrefetching() {
             this.isPaused = true;
+            // Abort all in-flight prefetch requests
+            for (const [url, controller] of this.pendingAbortControllers) {
+                controller.abort();
+            }
+            this.pendingAbortControllers.clear();
+            // Don't reset prefetchSemaphore here — in-flight prefetches still decrement
+            // it in their finally() handlers, so resetting would drive it negative.
             this.log('Prefetching paused');
         }
 
@@ -803,7 +836,7 @@ async storeInCache(url, trigger, priority) {
 
             try {
                 const transaction = this.db.transaction([this.config.STORE_NAME], 'readonly');
-                const store = transaction.objectStore(DEFAULT_CONFIG.STORE_NAME);
+                const store = transaction.objectStore(this.config.STORE_NAME);
                 
                 const count = await new Promise((resolve) => {
                     const request = store.count();
@@ -830,13 +863,34 @@ async storeInCache(url, trigger, priority) {
 
         // Destroy instance
         destroy() {
+            // Remove document-level listeners (capture flag must match addEventListener)
+            if (this._eventHandlers) {
+                const options = { capture: true };
+                document.removeEventListener('touchstart', this._eventHandlers.touchstart, options);
+                document.removeEventListener('mouseover', this._eventHandlers.mouseover, options);
+                document.removeEventListener('click', this._eventHandlers.click, options);
+                document.removeEventListener('visibilitychange', this._eventHandlers.visibilitychange);
+                this._eventHandlers = null;
+            }
+
+            if (this._onlineHandler) {
+                window.removeEventListener('online', this._onlineHandler);
+                window.removeEventListener('offline', this._offlineHandler);
+                this._onlineHandler = null;
+                this._offlineHandler = null;
+            }
+
             // Clean up resources
+            this.mutationObserver?.disconnect();
             this.broadcastChannel?.close();
             this.performanceObserver?.disconnect();
             this.intersectionObserver?.disconnect();
-            this.cleanupWorker?.terminate();
+            if (this.cleanupIntervalId) {
+                clearInterval(this.cleanupIntervalId);
+                this.cleanupIntervalId = null;
+            }
             this.db?.close();
-            
+
             this.log('Velocity destroyed');
         }
 
@@ -872,9 +926,12 @@ async storeInCache(url, trigger, priority) {
         }
 
         async fetchAndSanitizeContent(url) {
+            let timeoutId;
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), this.config.PREFETCH_TIMEOUT);
+                timeoutId = setTimeout(() => controller.abort(), this.config.PREFETCH_TIMEOUT);
+                // Track this controller so it can be aborted on pause
+                this.pendingAbortControllers.set(url, controller);
                 
                 const response = await fetch(url, { 
                     method: 'GET',
@@ -898,6 +955,9 @@ async storeInCache(url, trigger, priority) {
                     this.logError('Failed to fetch content:', error);
                 }
                 return null;
+            } finally {
+                this.pendingAbortControllers.delete(url);
+                clearTimeout(timeoutId);
             }
         }
 

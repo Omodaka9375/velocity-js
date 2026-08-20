@@ -34,9 +34,12 @@ let broadcastChannel;
 let performanceCounter = 0;
 let prefetchQueue = new Map();
 let cacheMetrics = new Map();
-let isOnline = true;
 
-// Register event listeners during initial script evaluation
+// Track network status from main thread (online/offline are Window events;
+// they don't fire on ServiceWorkerGlobalScope). Default to navigator.onLine
+// and update via BroadcastChannel messages from the main thread.
+let isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
 self.addEventListener('install', (event) => {
     console.log('[VelocityCache SW] Installing v' + SW_CONFIG.VERSION);
     
@@ -51,7 +54,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
     console.log('[VelocityCache SW] Activating v' + SW_CONFIG.VERSION);
-    
+
     event.waitUntil(
         Promise.all([
             cleanupOldCaches(),
@@ -59,19 +62,6 @@ self.addEventListener('activate', (event) => {
             self.clients.claim()
         ])
     );
-});
-
-// Register online/offline listeners during initial script evaluation
-self.addEventListener('online', () => {
-    console.log('[VelocityCache SW] Network online');
-    isOnline = true;
-    broadcastMessage({ type: 'ONLINE_STATUS', isOnline: true });
-});
-
-self.addEventListener('offline', () => {
-    console.log('[VelocityCache SW] Network offline');
-    isOnline = false;
-    broadcastMessage({ type: 'ONLINE_STATUS', isOnline: false });
 });
 
 // Register fetch event listener during initial script evaluation
@@ -171,9 +161,17 @@ async function handleFetchWithStrategy(request) {
         switch (requestType) {
             case 'static':
                 return await cacheFirstStrategy(request, SW_CONFIG.CACHE_NAMES.STATIC);
-            
-            case 'html':
+
+            case 'html': {
+                // Serve previously prefetched pages instantly if available
+                const prefetchCache = await caches.open(SW_CONFIG.CACHE_NAMES.PREFETCH);
+                const prefetched = await prefetchCache.match(request, { ignoreSearch: true });
+                if (prefetched) {
+                    recordCacheHit(request.url);
+                    return prefetched;
+                }
                 return await networkFirstStrategy(request, SW_CONFIG.CACHE_NAMES.DYNAMIC);
+            }
             
             case 'api':
                 return await networkFirstStrategy(request, SW_CONFIG.CACHE_NAMES.API, true);
@@ -202,7 +200,7 @@ async function cacheFirstStrategy(request, cacheName) {
     if (cachedResponse) {
         // Update cache in background if resource is stale
         if (isResourceStale(cachedResponse)) {
-            updateCacheInBackground(request, cache);
+            updateCacheInBackground(request, cache, cacheName);
         }
         
         recordCacheHit(request.url);
@@ -427,7 +425,7 @@ function calculateEvictionScore(metrics, timestamp) {
 // Enhanced BroadcastChannel message handler
 function handleBroadcastMessage(event) {
     const { type, url, priority, messageId, pattern } = event.data;
-    
+
     switch (type) {
         case 'PREFETCH':
             handlePrefetchRequest(url, priority, messageId);
@@ -452,7 +450,12 @@ function handleBroadcastMessage(event) {
         case 'CLEANUP_CACHE':
             handleManualCleanup(messageId);
             break;
-            
+
+        case 'ONLINE_STATUS':
+            // Main thread relays Window online/offline events
+            isOnline = !!event.data.isOnline;
+            break;
+
         default:
             console.log('[VelocityCache SW] Unknown message type:', type);
     }
@@ -521,8 +524,9 @@ async function executePrefetch({ url, messageId, priority }) {
         
         // Fetch resource
         const request = new Request(url, {
-            mode: 'cors',
-            credentials: 'same-origin'
+            mode: 'same-origin',
+            credentials: 'same-origin',
+            headers: { 'X-Prefetch-Source': 'velocity' }
         });
         
         const response = await fetchWithTimeout(request, SW_CONFIG.TIMEOUTS.PREFETCH);
@@ -616,7 +620,14 @@ function extractCriticalSubresources(html, baseUrl) {
 // Handle cache invalidation with pattern matching
 async function handleCacheInvalidation(pattern, messageId) {
     try {
-        const regex = new RegExp(pattern);
+        // Safely construct the RegExp — handle invalid patterns gracefully
+        let regex;
+        try {
+            regex = new RegExp(pattern);
+        } catch (e) {
+            broadcastResponse(messageId, false, 'Invalid pattern');
+            return;
+        }
         const cacheNames = Object.values(SW_CONFIG.CACHE_NAMES);
         let invalidatedCount = 0;
         
@@ -678,8 +689,10 @@ async function handleCacheStatsRequest(messageId) {
 
 // Placeholder handlers for missing functions
 async function handlePrerenderRequest(url, messageId) {
-    // Implement prerender logic similar to prefetch
-    await handlePrefetchRequest(url, 8, messageId); // High priority
+    // Prerender: same as prefetch but at highest priority, with speculative-execution semantics
+    await handlePrefetchRequest(url, 10, messageId);
+    // Notify main thread the prerender is ready (links can be used for <link rel="prerender">)
+    broadcastMessage({ type: 'PRERENDER_COMPLETE', url, messageId });
 }
 
 async function handleForceRefresh(url, messageId) {
@@ -688,7 +701,8 @@ async function handleForceRefresh(url, messageId) {
         const cacheNames = Object.values(SW_CONFIG.CACHE_NAMES);
         for (const cacheName of cacheNames) {
             const cache = await caches.open(cacheName);
-            await cache.delete(url);
+            // cache.delete accepts URL string or Request; use Request for reliability
+            await cache.delete(new Request(url));
         }
         
         // Prefetch fresh version
@@ -795,11 +809,11 @@ function recordCacheFallback(url) {
 }
 
 // Background cache updates
-async function updateCacheInBackground(request, cache) {
+async function updateCacheInBackground(request, cache, cacheName) {
     try {
         const response = await fetchWithTimeout(request, SW_CONFIG.TIMEOUTS.FETCH);
         if (response && response.status === 200) {
-            await safeCachePut(cache, request, response, cache.name || 'unknown');
+            await safeCachePut(cache, request, response, cacheName);
             broadcastCacheUpdate(request.url, 'UPDATED');
         }
     } catch (error) {

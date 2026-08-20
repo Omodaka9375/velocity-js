@@ -990,14 +990,12 @@ function generateTestLinks() {
     log('Generated test links with real hover/touch/click prefetching', 'info');
 }
 
-// Fixed: Clear Velocity cache function
+// Clear Velocity cache — delegate to the library so IndexedDB,
+// in-memory state AND Cache API buckets are all cleared consistently
 async function clearVelocityCache() {
     if (velocityInstance) {
         try {
-            let cnames = ['velocity-static-v1', 'velocity-dynamic-v1', 'velocity-prefetch-v1', 'velocity-api-v1']
-            for (var i=0; i < cnames.length; i++){
-                caches.delete(cnames[i])
-            }
+            await velocityInstance.clearCache();
 
             log('Velocity cache cleared', 'success');
             
@@ -1063,57 +1061,6 @@ async function bulkPrefetchTest() {
         return 0;
     }
 }
-
-        // Generate test links with real prefetching
-        function generateTestLinks() {
-            const container = document.getElementById('test-links');
-            if (!container) return;
-
-            const pages = [
-                { name: 'Page 1', url: 'test/demo-1.html' },
-                { name: 'Page 2', url: 'test/demo-2.html' },
-                { name: 'Page 3', url: 'test/demo-3.html' },
-                { name: 'Page 4', url: 'test/demo-4.html' },
-                { name: 'Page 5', url: 'test/demo-5.html' },
-                { name: 'Page 6', url: 'test/demo-6.html' },
-                { name: 'Page 7', url: 'test/demo-7.html' },
-                { name: 'Page 8', url: 'test/demo-8.html' },
-                { name: 'Page 9', url: 'test/demo-9.html' },
-                { name: 'Page 10', url: 'test/demo-10.html' }
-            ];
-
-            container.innerHTML = '';
-            
-            pages.forEach((page) => {
-                const link = document.createElement('a');
-                link.href = page.url;
-                link.className = 'demo-link';
-                link.textContent = page.name;
-                //link.target = '_blank'
-                
-                link.addEventListener('mouseenter', async () => {
-                    if (velocityInstance) {
-                        try {
-               
-                            await velocityInstance.prefetchResource({
-                                url: link.href,
-                                trigger: 'test',
-                                priority: 8
-                            });
-                            link.classList.add('prefetched');
-                            log(`Prefetched: ${link.href}`, 'success');
-                            testResults.prefetchCount++;
-                        } catch (error) {
-                            log(`Prefetch failed: ${error.message}`, 'error');
-                        }
-                    }
-                });
-                
-                container.appendChild(link);
-            });
-
-            log('Generated test links with real hover prefetching', 'info');
-        }
 
         // Test Service Worker functionality
         async function testServiceWorker() {
@@ -1324,7 +1271,9 @@ async function bulkPrefetchTest() {
                 log('BroadcastChannel API: ✗ Not available', 'error');
             }
             var msg = `Service Worker API: ${sw}, Cache API: ${ch}, Broadcast API: ${bc}`;
-            velocityInstance.showVisualFeedback(msg)
+            if (velocityInstance) {
+                velocityInstance.showVisualFeedback(msg);
+            }
         }
 
         async function forceCleanup() {
