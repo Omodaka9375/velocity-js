@@ -1,6 +1,6 @@
 {
     "name": "velocity-js",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "commonjs",
     "description": "Intelligent performance optimization library that dramatically speeds up your website by predicting and prefetching resources before users need them!",
     "main": "velocity.min.js",
@@ -10,7 +10,7 @@
         "test": ""
     },
     "devDependencies": {
-        "terser": "^5.0.0"
+        "terser": "^5.50.0"
     },
     "repository": {
         "type": "git",
@@ -30,8 +30,5 @@
         "LICENSE"
     ],
     "author": "Branislav Đalić",
-    "license": "Apache-2.0",
-    "devDependencies": {
-        "terser": "^5.50.0"
-    }
+    "license": "Apache-2.0"
 }
